@@ -13,6 +13,9 @@ type AppConfig struct {
 	PostgresPassword       string `mapstructure:"POSTGRES_PASSWORD"`
 	PostgresSslMode        string `mapstructure:"POSTGRES_SSLMODE"`
 	PostgresMigrationsPath string `mapstructure:"POSTGRES_MIGRATIONS_PATH"`
+	RedisHost              string `mapstructure:"REDIS_HOST"`
+	RedisPort              string `mapstructure:"REDIS_PORT"`
+	RedisPassword          string `mapstructure:"REDIS_PASSWORD"`
 }
 
 func (config *AppConfig) SetDefault() {
@@ -22,6 +25,8 @@ func (config *AppConfig) SetDefault() {
 	config.PostgresUser = "postgres"
 	config.PostgresSslMode = "disable"
 	config.PostgresMigrationsPath = "file://./migrations"
+	config.RedisHost = "localhost"
+	config.RedisPort = "6379"
 }
 
 func (config *AppConfig) Load(path, name string) (err error) {
@@ -41,6 +46,9 @@ func (config *AppConfig) Load(path, name string) (err error) {
 		viper.BindEnv("POSTGRES_PASSWORD")
 		viper.BindEnv("POSTGRES_SSLMODE")
 		viper.BindEnv("POSTGRES_MIGRATIONS_PATH")
+		viper.BindEnv("REDIS_HOST")
+		viper.BindEnv("REDIS_PORT")
+		viper.BindEnv("REDIS_PASSWORD")
 		return viper.Unmarshal(config)
 	}
 	return viper.Unmarshal(config)

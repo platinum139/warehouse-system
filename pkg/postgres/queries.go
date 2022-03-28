@@ -1,18 +1,11 @@
 package postgres
 
-import "log"
+import (
+	"log"
+	"warehouse-system/pkg/models"
+)
 
-type BoughtProductsQuantity struct {
-	Manufacturer           string
-	BoughtProductsQuantity int
-}
-
-type BoughtItemsQuantity struct {
-	Manufacturer        string
-	BoughtItemsQuantity int
-}
-
-func (client *Client) GetBoughtProductsQuantity() ([]BoughtProductsQuantity, error) {
+func (client *Client) GetBoughtProductsQuantity() ([]models.BoughtProductsQuantity, error) {
 	log.SetPrefix("[Client.GetBoughtProductsQuantity]")
 
 	queryStr := `
@@ -31,7 +24,7 @@ func (client *Client) GetBoughtProductsQuantity() ([]BoughtProductsQuantity, err
 	}
 	defer rows.Close()
 
-	var quantities []BoughtProductsQuantity
+	var quantities []models.BoughtProductsQuantity
 	for rows.Next() {
 		var (
 			manufacturer string
@@ -41,7 +34,7 @@ func (client *Client) GetBoughtProductsQuantity() ([]BoughtProductsQuantity, err
 			log.Printf("unable to scan result: %s\n", err)
 			return nil, err
 		}
-		quantities = append(quantities, BoughtProductsQuantity{
+		quantities = append(quantities, models.BoughtProductsQuantity{
 			Manufacturer:           manufacturer,
 			BoughtProductsQuantity: quantity,
 		})
@@ -49,7 +42,7 @@ func (client *Client) GetBoughtProductsQuantity() ([]BoughtProductsQuantity, err
 	return quantities, nil
 }
 
-func (client *Client) GetBoughtItemsQuantity() ([]BoughtItemsQuantity, error) {
+func (client *Client) GetBoughtItemsQuantity() ([]models.BoughtItemsQuantity, error) {
 	log.SetPrefix("[Client.GetBoughtItemsQuantity]")
 
 	queryStr := `
@@ -68,7 +61,7 @@ func (client *Client) GetBoughtItemsQuantity() ([]BoughtItemsQuantity, error) {
 	}
 	defer rows.Close()
 
-	var quantities []BoughtItemsQuantity
+	var quantities []models.BoughtItemsQuantity
 	for rows.Next() {
 		var (
 			manufacturer string
@@ -78,7 +71,7 @@ func (client *Client) GetBoughtItemsQuantity() ([]BoughtItemsQuantity, error) {
 			log.Printf("unable to scan result: %s\n", err)
 			return nil, err
 		}
-		quantities = append(quantities, BoughtItemsQuantity{
+		quantities = append(quantities, models.BoughtItemsQuantity{
 			Manufacturer:        manufacturer,
 			BoughtItemsQuantity: quantity,
 		})
