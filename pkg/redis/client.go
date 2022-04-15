@@ -82,6 +82,20 @@ func (client *Client) SetBoughtItemsCache(boughtItems []models.BoughtItemsQuanti
 	return client.rds.HSet(client.ctx, "items:bought", input).Err()
 }
 
+func (client *Client) PutRequestToQueue(request string) error {
+	return client.rds.RPush(client.ctx, "requests", request).Err()
+}
+
+func (client *Client) PopRequestFromQueue() (string, error) {
+	request, err := client.rds.LPop(client.ctx, "requests").Result()
+	if err == redis.Nil {
+		return "", nil
+	} else if err != nil {
+		return "", err
+	}
+	return request, nil
+}
+
 func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConfig) *Client {
 	log.SetPrefix("[redis.NewClient] ")
 
