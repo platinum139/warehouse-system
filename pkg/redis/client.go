@@ -31,7 +31,7 @@ func (client *Client) GetBoughtProductsCache() ([]models.BoughtProductsQuantity,
 		for manufacturer, quantity := range result {
 			q, err := strconv.Atoi(quantity)
 			if err != nil {
-				client.log.Println("unable to parse quantity to int")
+				client.log.Println("Unable to parse quantity to int.")
 			}
 			boughtProductsRes = append(boughtProductsRes, models.BoughtProductsQuantity{
 				Manufacturer:           manufacturer,
@@ -53,7 +53,7 @@ func (client *Client) GetBoughtItemsCache() ([]models.BoughtItemsQuantity, error
 		for manufacturer, quantity := range result {
 			q, err := strconv.Atoi(quantity)
 			if err != nil {
-				client.log.Println("unable to parse quantity to int")
+				client.log.Println("Unable to parse quantity to int.")
 			}
 			boughtItemsRes = append(boughtItemsRes, models.BoughtItemsQuantity{
 				Manufacturer:        manufacturer,
@@ -97,7 +97,7 @@ func (client *Client) PopRequestFromQueue() (string, error) {
 }
 
 func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConfig) *Client {
-	log.SetPrefix("[redis.NewClient] ")
+	log.SetPrefix("[redis client] ")
 
 	rds := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", config.RedisHost, config.RedisPort),
@@ -107,7 +107,7 @@ func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConf
 
 	_, err := rds.Ping(ctx).Result()
 	if err != nil {
-		log.Printf("unable to ping redis: %s\n", err)
+		log.Printf("Unable to ping redis: %s\n", err)
 		return nil
 	}
 	log.Println("Redis Ping-Pong is successful.")

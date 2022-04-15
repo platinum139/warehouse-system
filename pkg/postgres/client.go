@@ -21,25 +21,25 @@ func (client *Client) Close() {
 }
 
 func NewClient(log *log.Logger, config *config.AppConfig) *Client {
-	log.SetPrefix("[postgres.NewClient]")
+	log.SetPrefix("[postgres client] ")
 
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.PostgresUser, config.PostgresPassword, config.PostgresHost, config.PostgresPort,
 		config.PostgresDB, config.PostgresSslMode)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Printf("unable to open connection: %s\n", err)
+		log.Printf("Unable to open connection: %s\n", err)
 		return nil
 	}
 
 	if err := db.Ping(); err != nil {
-		log.Printf("unable to ping postgres: %s\n", err)
+		log.Printf("Unable to ping postgres: %s\n", err)
 		return nil
 	}
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
-		log.Printf("unable to create driver for migrations: %s\n", err)
+		log.Printf("Unable to create driver for migrations: %s\n", err)
 		return nil
 	}
 
@@ -47,7 +47,7 @@ func NewClient(log *log.Logger, config *config.AppConfig) *Client {
 		config.PostgresMigrationsPath, config.PostgresDB, driver)
 	err = migrations.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		log.Printf("unable to make migrations: %s\n", err)
+		log.Printf("Unable to make migrations: %s\n", err)
 		return nil
 	}
 
