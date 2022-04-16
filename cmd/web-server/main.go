@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"warehouse-system/config"
+	"warehouse-system/pkg/api"
 	"warehouse-system/pkg/redis"
+	"warehouse-system/pkg/services"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 
 func main() {
 	ctx := context.Background()
-	logger := log.New(os.Stdout, "[main] ", log.Ldate)
+	logger := log.New(os.Stdout, "[main] ", log.Ldate|log.Ltime)
 	logger.Println("Web server started.")
 
 	appConfig := config.NewAppConfig()
@@ -30,4 +32,9 @@ func main() {
 		return
 	}
 	defer redisClient.Close()
+
+	productService := services.NewProductService(logger, redisClient)
+
+	webServer := api.NewWebServer(appConfig.WebServerHost, appConfig.WebServerPort, logger, productService)
+	webServer.Run()
 }
