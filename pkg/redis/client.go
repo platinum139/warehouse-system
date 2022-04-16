@@ -6,6 +6,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"log"
 	"strconv"
+	"time"
 	"warehouse-system/config"
 	"warehouse-system/pkg/models"
 )
@@ -87,13 +88,13 @@ func (client *Client) PutRequestToQueue(request string) error {
 }
 
 func (client *Client) PopRequestFromQueue() (string, error) {
-	request, err := client.rds.LPop(client.ctx, "requests").Result()
+	result, err := client.rds.BLPop(client.ctx, 60*time.Second, "requests").Result()
 	if err == redis.Nil {
 		return "", nil
 	} else if err != nil {
 		return "", err
 	}
-	return request, nil
+	return result[1], nil
 }
 
 func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConfig) *Client {

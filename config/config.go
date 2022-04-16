@@ -16,6 +16,8 @@ type AppConfig struct {
 	RedisHost              string `mapstructure:"REDIS_HOST"`
 	RedisPort              string `mapstructure:"REDIS_PORT"`
 	RedisPassword          string `mapstructure:"REDIS_PASSWORD"`
+	WebServerHost          string `mapstructure:"WEB_SERVER_HOST"`
+	WebServerPort          string `mapstructure:"WEB_SERVER_PORT"`
 }
 
 func (config *AppConfig) SetDefault() {
@@ -27,6 +29,8 @@ func (config *AppConfig) SetDefault() {
 	config.PostgresMigrationsPath = "file://./migrations"
 	config.RedisHost = "localhost"
 	config.RedisPort = "6379"
+	config.WebServerHost = "localhost"
+	config.WebServerPort = "80"
 }
 
 func (config *AppConfig) Load(path, name string) (err error) {
@@ -49,6 +53,8 @@ func (config *AppConfig) Load(path, name string) (err error) {
 		viper.BindEnv("REDIS_HOST")
 		viper.BindEnv("REDIS_PORT")
 		viper.BindEnv("REDIS_PASSWORD")
+		viper.BindEnv("WEB_SERVER_HOST")
+		viper.BindEnv("WEB_SERVER_PORT")
 		return viper.Unmarshal(config)
 	}
 	return viper.Unmarshal(config)

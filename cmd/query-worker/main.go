@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"warehouse-system/config"
 	"warehouse-system/pkg/postgres"
+	"warehouse-system/pkg/redis"
 )
 
 const (
@@ -13,7 +15,8 @@ const (
 )
 
 func main() {
-	logger := log.New(os.Stdout, "[main]", log.Ldate)
+	logger := log.New(os.Stdout, "[main] ", log.Ldate|log.Ltime)
+	ctx := context.Background()
 
 	appConfig := config.NewAppConfig()
 	if err := appConfig.Load(path, file); err != nil {
@@ -21,28 +24,20 @@ func main() {
 		return
 	}
 
+	redisClient := redis.NewRedisClient(ctx, logger, appConfig)
+	if redisClient == nil {
+		logger.Println("Unable to create new redis client.")
+		return
+	}
+	defer redisClient.Close()
+
 	postgresClient := postgres.NewClient(logger, appConfig)
 	if postgresClient == nil {
-		logger.Println("unable to create new postgres client")
+		logger.Println("Unable to create new postgres client.")
 		return
 	}
 	defer postgresClient.Close()
 
-	quantities, err := postgresClient.GetBoughtProductsQuantity()
-	if err != nil {
-		log.Printf("unable to get bought products quantities: %s\n", err)
-		return
-	}
-	for _, quantity := range quantities {
-		log.Printf("%s: %d\n", quantity.Manufacturer, quantity.BoughtProductsQuantity)
-	}
-
-	itemsQuantities, err := postgresClient.GetBoughtItemsQuantity()
-	if err != nil {
-		log.Printf("unable to get bought products quantities: %s\n", err)
-		return
-	}
-	for _, quantity := range itemsQuantities {
-		log.Printf("%s: %d\n", quantity.Manufacturer, quantity.BoughtItemsQuantity)
-	}
+	queueHandler := NewQueueHandler(logger, redisClient, postgresClient)
+	queueHandler.Run()
 }
