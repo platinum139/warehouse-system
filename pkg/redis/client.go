@@ -97,6 +97,23 @@ func (client *Client) PopRequestFromQueue() (string, error) {
 	return result[1], nil
 }
 
+func (client *Client) PublishResult(message string) error {
+	return client.rds.Publish(client.ctx, "response", message).Err()
+}
+
+func (client *Client) SubscribeForResult() (string, error) {
+	pubsub := client.rds.Subscribe(client.ctx, "response")
+
+	message := <-pubsub.Channel()
+	client.log.Printf("Received message: %s\n", message.Payload)
+
+	if err := pubsub.Close(); err != nil {
+		return "", err
+	}
+
+	return message.Payload, nil
+}
+
 func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConfig) *Client {
 	log.SetPrefix("[redis client] ")
 
