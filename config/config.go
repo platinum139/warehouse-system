@@ -18,6 +18,8 @@ type AppConfig struct {
 	RedisPassword          string `mapstructure:"REDIS_PASSWORD"`
 	WebServerHost          string `mapstructure:"WEB_SERVER_HOST"`
 	WebServerPort          string `mapstructure:"WEB_SERVER_PORT"`
+	CacheExpireDuration    int    `mapstructure:"CACHE_EXPIRE_DURATION"`
+	SubscribeTimeout       int    `mapstructure:"SUBSCRIBE_TIMEOUT"`
 }
 
 func (config *AppConfig) SetDefault() {
@@ -31,6 +33,8 @@ func (config *AppConfig) SetDefault() {
 	config.RedisPort = "6379"
 	config.WebServerHost = "localhost"
 	config.WebServerPort = "80"
+	config.CacheExpireDuration = 30
+	config.SubscribeTimeout = 5
 }
 
 func (config *AppConfig) Load(path, name string) (err error) {
@@ -55,6 +59,8 @@ func (config *AppConfig) Load(path, name string) (err error) {
 		viper.BindEnv("REDIS_PASSWORD")
 		viper.BindEnv("WEB_SERVER_HOST")
 		viper.BindEnv("WEB_SERVER_PORT")
+		viper.BindEnv("CACHE_EXPIRE_DURATION")
+		viper.BindEnv("SUBSCRIBE_TIMEOUT")
 		return viper.Unmarshal(config)
 	}
 	return viper.Unmarshal(config)

@@ -2,12 +2,15 @@ package main
 
 import (
 	"log"
+	"time"
+	"warehouse-system/config"
 	"warehouse-system/pkg/postgres"
 	"warehouse-system/pkg/redis"
 )
 
 type QueueHandler struct {
 	log            *log.Logger
+	config         *config.AppConfig
 	redisClient    *redis.Client
 	postgresClient *postgres.Client
 }
@@ -31,7 +34,8 @@ func (handler *QueueHandler) Run() {
 					handler.log.Printf("Failed to get bought products quantity from postgres: %s\n", err)
 					break
 				}
-				err = handler.redisClient.SetBoughtProductsCache(boughtProductsQuantity)
+				expireAfter := time.Duration(handler.config.CacheExpireDuration) * time.Second
+				err = handler.redisClient.SetBoughtProductsCache(boughtProductsQuantity, expireAfter)
 				if err != nil {
 					handler.log.Printf("Failed to set bought products cache: %s\n", err)
 					break
@@ -46,7 +50,8 @@ func (handler *QueueHandler) Run() {
 					handler.log.Printf("Failed to get bought items quantity from postgres: %s\n", err)
 					break
 				}
-				err = handler.redisClient.SetBoughtItemsCache(boughtItemsQuantity)
+				expireAfter := time.Duration(handler.config.CacheExpireDuration) * time.Second
+				err = handler.redisClient.SetBoughtItemsCache(boughtItemsQuantity, expireAfter)
 				if err != nil {
 					handler.log.Printf("Failed to set bought items cache: %s\n", err)
 					break
@@ -64,10 +69,11 @@ func (handler *QueueHandler) Run() {
 	}
 }
 
-func NewQueueHandler(log *log.Logger, redis *redis.Client, postgres *postgres.Client) *QueueHandler {
+func NewQueueHandler(log *log.Logger, config *config.AppConfig, redis *redis.Client, postgres *postgres.Client) *QueueHandler {
 	log.SetPrefix("[queue handler] ")
 	return &QueueHandler{
 		log:            log,
+		config:         config,
 		redisClient:    redis,
 		postgresClient: postgres,
 	}
