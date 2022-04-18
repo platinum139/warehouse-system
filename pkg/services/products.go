@@ -1,9 +1,9 @@
 package services
 
 import (
-	"errors"
 	"log"
 	"warehouse-system/config"
+	e "warehouse-system/errors"
 	"warehouse-system/pkg/models"
 	"warehouse-system/pkg/redis"
 )
@@ -36,12 +36,13 @@ func (ps *ProductService) GetBoughtProducts() ([]models.BoughtProductsQuantity, 
 
 	message, err := ps.redisClient.SubscribeForResult(ps.config.SubscribeTimeout)
 	if err != nil {
+		ps.log.Printf("Subscribing for result failed: %s\n", err)
 		return nil, err
 	}
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
 	if message == "failed" {
-		return nil, errors.New("failed to process query")
+		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
 	}
 
 	if message == "success" {
@@ -82,7 +83,7 @@ func (ps *ProductService) GetBoughtItems() ([]models.BoughtItemsQuantity, error)
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
 	if message == "failed" {
-		return nil, errors.New("failed to process query")
+		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
 	}
 
 	if message == "success" {

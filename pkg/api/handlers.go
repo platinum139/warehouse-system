@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"warehouse-system/errors"
 	"warehouse-system/pkg/services"
 )
 
@@ -24,38 +25,81 @@ func (server *WebServer) Run() {
 }
 
 func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Token")
+	if token == "" {
+		err := errors.BadRequestError{Message: "token must be provided"}
+		server.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	server.log.Printf("Token: %s\n", token)
+
 	boughtProductsQuantity, err := server.productService.GetBoughtProducts()
 	if err != nil {
+		server.log.Printf("Get bought products failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	data, err := json.Marshal(boughtProductsQuantity)
 	if err != nil {
 		server.log.Println("Unable to marshal boughtProductsQuantity struct.")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(data)
 	if err != nil {
 		server.log.Printf("Unable to send response: %s\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("Token")
+	if token == "" {
+		err := errors.BadRequestError{Message: "token must be provided"}
+		server.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+	server.log.Printf("Token: %s\n", token)
+
 	boughtItemsQuantity, err := server.productService.GetBoughtItems()
 	if err != nil {
+		server.log.Printf("Get bought items failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	data, err := json.Marshal(boughtItemsQuantity)
 	if err != nil {
 		server.log.Println("Unable to marshal boughtItemsQuantity struct.")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(data)
 	if err != nil {
 		server.log.Printf("Unable to send response: %s\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (server *WebServer) writeError(w http.ResponseWriter, err error, statusCode int) {
+	data, err := json.Marshal(map[string]string{
+		"error": err.Error(),
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_, err = w.Write(data)
+	if err != nil {
+		server.log.Printf("Unable to send response: %s\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
