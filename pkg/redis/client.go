@@ -2,13 +2,13 @@ package redis
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"log"
 	"strconv"
 	"time"
 	"warehouse-system/config"
+	e "warehouse-system/errors"
 	"warehouse-system/pkg/models"
 )
 
@@ -117,7 +117,7 @@ func (client *Client) SubscribeForResult(timeout int) (string, error) {
 		client.log.Printf("Received message: %s\n", message.Payload)
 	case <-time.After(time.Duration(timeout) * time.Second):
 		client.log.Printf("Receiving message time out.")
-		return "", errors.New("time out")
+		return "", e.SubscribeTimeoutError{Message: "receiving response time out"}
 	}
 
 	if err := pubsub.Close(); err != nil {
