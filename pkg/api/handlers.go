@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brianvoe/gofakeit/v6"
 	"log"
 	"net/http"
 	"warehouse-system/errors"
@@ -33,7 +34,10 @@ func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r 
 	}
 	server.log.Printf("Token: %s\n", token)
 
-	boughtProductsQuantity, err := server.productService.GetBoughtProducts()
+	uid := gofakeit.LetterN(16)
+	server.log.Printf("Uid: %s\n", uid)
+
+	boughtProductsQuantity, err := server.productService.GetBoughtProducts(token, uid)
 	if err != nil {
 		server.log.Printf("Get bought products failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -64,7 +68,10 @@ func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *ht
 	}
 	server.log.Printf("Token: %s\n", token)
 
-	boughtItemsQuantity, err := server.productService.GetBoughtItems()
+	uid := gofakeit.LetterN(16)
+	server.log.Printf("Uid: %s\n", uid)
+
+	boughtItemsQuantity, err := server.productService.GetBoughtItems(token, uid)
 	if err != nil {
 		server.log.Printf("Get bought items failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
