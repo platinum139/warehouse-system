@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"time"
 	"warehouse-system/config"
 	"warehouse-system/pkg/postgres"
@@ -24,9 +26,19 @@ func (handler *QueueHandler) Run() {
 		}
 
 		if request != "" {
+			parts := strings.Split(request, ":")
+			token := parts[0]
+			handler.log.Printf("Received token: %s\n", token)
+
+			uid := parts[1]
+			handler.log.Printf("Received uid: %s\n", uid)
+
+			query := strings.Join(parts[2:], ":")
+			handler.log.Printf("Received query: %s\n", query)
+
 			message := "failed"
 
-			switch request {
+			switch query {
 			case "products:bought":
 				handler.log.Printf("Incoming request: products:bought.")
 				boughtProductsQuantity, err := handler.postgresClient.GetBoughtProductsQuantity()
@@ -60,10 +72,11 @@ func (handler *QueueHandler) Run() {
 				message = "success"
 			}
 
-			if err := handler.redisClient.PublishResult(message); err != nil {
+			topic := fmt.Sprintf("%s:%s", token, uid)
+			if err := handler.redisClient.PublishResult(topic, message); err != nil {
 				handler.log.Printf("Failed to publish message: %s\n", err)
 			} else {
-				handler.log.Printf("Message '%s' is published successfully.\n", message)
+				handler.log.Printf("Message '%s' is published successfully to topic %s.\n", message, topic)
 			}
 		}
 	}

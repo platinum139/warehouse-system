@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"warehouse-system/config"
 	e "warehouse-system/errors"
@@ -14,7 +15,7 @@ type ProductService struct {
 	redisClient *redis.Client
 }
 
-func (ps *ProductService) GetBoughtProducts() ([]models.BoughtProductsQuantity, error) {
+func (ps *ProductService) GetBoughtProducts(token, uid string) ([]models.BoughtProductsQuantity, error) {
 	boughtProductsQuantity, err := ps.redisClient.GetBoughtProductsCache()
 	if err != nil {
 		return nil, err
@@ -28,13 +29,15 @@ func (ps *ProductService) GetBoughtProducts() ([]models.BoughtProductsQuantity, 
 	// if cache is empty, put request to a queue
 	ps.log.Println("'products:bought' cache is empty.")
 
-	if err := ps.redisClient.PutRequestToQueue("products:bought"); err != nil {
+	request := fmt.Sprintf("%s:%s:products:bought", token, uid)
+	if err := ps.redisClient.PutRequestToQueue(request); err != nil {
 		ps.log.Printf("Unable to put request to queue: %s\n", err)
 		return nil, err
 	}
 	ps.log.Println("Request is put to queue successfully.")
 
-	message, err := ps.redisClient.SubscribeForResult(ps.config.SubscribeTimeout)
+	topic := fmt.Sprintf("%s:%s", token, uid)
+	message, err := ps.redisClient.SubscribeForResult(topic, ps.config.SubscribeTimeout)
 	if err != nil {
 		ps.log.Printf("Subscribing for result failed: %s\n", err)
 		return nil, err
@@ -56,7 +59,7 @@ func (ps *ProductService) GetBoughtProducts() ([]models.BoughtProductsQuantity, 
 	return nil, nil
 }
 
-func (ps *ProductService) GetBoughtItems() ([]models.BoughtItemsQuantity, error) {
+func (ps *ProductService) GetBoughtItems(token, uid string) ([]models.BoughtItemsQuantity, error) {
 	boughtItemsQuantity, err := ps.redisClient.GetBoughtItemsCache()
 	if err != nil {
 		return nil, err
@@ -70,13 +73,15 @@ func (ps *ProductService) GetBoughtItems() ([]models.BoughtItemsQuantity, error)
 	// if cache is empty, put request to a queue
 	ps.log.Println("'items:bought' cache is empty.")
 
-	if err := ps.redisClient.PutRequestToQueue("items:bought"); err != nil {
+	request := fmt.Sprintf("%s:%s:items:bought", token, uid)
+	if err := ps.redisClient.PutRequestToQueue(request); err != nil {
 		ps.log.Printf("Unable to put request to queue: %s\n", err)
 		return nil, err
 	}
 	ps.log.Println("Request is put to queue successfully.")
 
-	message, err := ps.redisClient.SubscribeForResult(ps.config.SubscribeTimeout)
+	topic := fmt.Sprintf("%s:%s", token, uid)
+	message, err := ps.redisClient.SubscribeForResult(topic, ps.config.SubscribeTimeout)
 	if err != nil {
 		return nil, err
 	}

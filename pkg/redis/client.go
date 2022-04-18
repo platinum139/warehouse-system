@@ -104,12 +104,12 @@ func (client *Client) PopRequestFromQueue() (string, error) {
 	return result[1], nil
 }
 
-func (client *Client) PublishResult(message string) error {
-	return client.rds.Publish(client.ctx, "response", message).Err()
+func (client *Client) PublishResult(topic, message string) error {
+	return client.rds.Publish(client.ctx, topic, message).Err()
 }
 
-func (client *Client) SubscribeForResult(timeout int) (string, error) {
-	pubsub := client.rds.Subscribe(client.ctx, "response")
+func (client *Client) SubscribeForResult(topic string, timeout int) (string, error) {
+	pubsub := client.rds.Subscribe(client.ctx, topic)
 
 	var message *redis.Message
 	select {
