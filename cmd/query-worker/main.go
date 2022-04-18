@@ -38,6 +38,6 @@ func main() {
 	}
 	defer postgresClient.Close()
 
-	queueHandler := NewQueueHandler(logger, redisClient, postgresClient)
+	queueHandler := NewQueueHandler(logger, appConfig, redisClient, postgresClient)
 	queueHandler.Run()
 }

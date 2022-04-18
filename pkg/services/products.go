@@ -3,12 +3,14 @@ package services
 import (
 	"errors"
 	"log"
+	"warehouse-system/config"
 	"warehouse-system/pkg/models"
 	"warehouse-system/pkg/redis"
 )
 
 type ProductService struct {
 	log         *log.Logger
+	config      *config.AppConfig
 	redisClient *redis.Client
 }
 
@@ -32,7 +34,7 @@ func (ps *ProductService) GetBoughtProducts() ([]models.BoughtProductsQuantity, 
 	}
 	ps.log.Println("Request is put to queue successfully.")
 
-	message, err := ps.redisClient.SubscribeForResult()
+	message, err := ps.redisClient.SubscribeForResult(ps.config.SubscribeTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +75,7 @@ func (ps *ProductService) GetBoughtItems() ([]models.BoughtItemsQuantity, error)
 	}
 	ps.log.Println("Request is put to queue successfully.")
 
-	message, err := ps.redisClient.SubscribeForResult()
+	message, err := ps.redisClient.SubscribeForResult(ps.config.SubscribeTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -90,14 +92,15 @@ func (ps *ProductService) GetBoughtItems() ([]models.BoughtItemsQuantity, error)
 		}
 		return boughtItemsQuantity, nil
 	}
-	
+
 	return nil, nil
 }
 
-func NewProductService(log *log.Logger, redisClient *redis.Client) *ProductService {
+func NewProductService(log *log.Logger, config *config.AppConfig, redisClient *redis.Client) *ProductService {
 	log.SetPrefix("[product service] ")
 	return &ProductService{
 		log:         log,
+		config:      config,
 		redisClient: redisClient,
 	}
 }

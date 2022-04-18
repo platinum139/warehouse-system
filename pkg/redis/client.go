@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"log"
@@ -65,22 +66,28 @@ func (client *Client) GetBoughtItemsCache() ([]models.BoughtItemsQuantity, error
 	}
 }
 
-func (client *Client) SetBoughtProductsCache(boughtProducts []models.BoughtProductsQuantity) error {
+func (client *Client) SetBoughtProductsCache(boughtProducts []models.BoughtProductsQuantity, expiresAfter time.Duration) error {
 	var input []string
 	for _, item := range boughtProducts {
 		input = append(input, item.Manufacturer)
 		input = append(input, strconv.Itoa(item.BoughtProductsQuantity))
 	}
-	return client.rds.HSet(client.ctx, "products:bought", input).Err()
+	if err := client.rds.HSet(client.ctx, "products:bought", input).Err(); err != nil {
+		return err
+	}
+	return client.rds.Expire(client.ctx, "products:bought", expiresAfter).Err()
 }
 
-func (client *Client) SetBoughtItemsCache(boughtItems []models.BoughtItemsQuantity) error {
+func (client *Client) SetBoughtItemsCache(boughtItems []models.BoughtItemsQuantity, expiresAfter time.Duration) error {
 	var input []string
 	for _, item := range boughtItems {
 		input = append(input, item.Manufacturer)
 		input = append(input, strconv.Itoa(item.BoughtItemsQuantity))
 	}
-	return client.rds.HSet(client.ctx, "items:bought", input).Err()
+	if err := client.rds.HSet(client.ctx, "items:bought", input).Err(); err != nil {
+		return err
+	}
+	return client.rds.Expire(client.ctx, "items:bought", expiresAfter).Err()
 }
 
 func (client *Client) PutRequestToQueue(request string) error {
@@ -101,11 +108,17 @@ func (client *Client) PublishResult(message string) error {
 	return client.rds.Publish(client.ctx, "response", message).Err()
 }
 
-func (client *Client) SubscribeForResult() (string, error) {
+func (client *Client) SubscribeForResult(timeout int) (string, error) {
 	pubsub := client.rds.Subscribe(client.ctx, "response")
 
-	message := <-pubsub.Channel()
-	client.log.Printf("Received message: %s\n", message.Payload)
+	var message *redis.Message
+	select {
+	case message = <-pubsub.Channel():
+		client.log.Printf("Received message: %s\n", message.Payload)
+	case <-time.After(time.Duration(timeout) * time.Second):
+		client.log.Printf("Receiving message time out.")
+		return "", errors.New("time out")
+	}
 
 	if err := pubsub.Close(); err != nil {
 		return "", err
