@@ -2,11 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v6"
 	"log"
 	"net/http"
-	"warehouse-system/errors"
+	e "warehouse-system/errors"
 	"warehouse-system/pkg/services"
 )
 
@@ -28,7 +29,7 @@ func (server *WebServer) Run() {
 func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Token")
 	if token == "" {
-		err := errors.BadRequestError{Message: "token must be provided"}
+		err := e.BadRequestError{Message: "token must be provided"}
 		server.writeError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -38,6 +39,11 @@ func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r 
 	server.log.Printf("Uid: %s\n", uid)
 
 	boughtProductsQuantity, err := server.productService.GetBoughtProducts(token, uid)
+	target := &e.MaxRetryCountExceededError{}
+	if errors.As(err, &target) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		return
+	}
 	if err != nil {
 		server.log.Printf("Get bought products failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +68,7 @@ func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r 
 func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Token")
 	if token == "" {
-		err := errors.BadRequestError{Message: "token must be provided"}
+		err := e.BadRequestError{Message: "token must be provided"}
 		server.writeError(w, err, http.StatusBadRequest)
 		return
 	}
@@ -72,6 +78,11 @@ func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *ht
 	server.log.Printf("Uid: %s\n", uid)
 
 	boughtItemsQuantity, err := server.productService.GetBoughtItems(token, uid)
+	target := &e.MaxRetryCountExceededError{}
+	if errors.As(err, &target) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		return
+	}
 	if err != nil {
 		server.log.Printf("Get bought items failed: %s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)

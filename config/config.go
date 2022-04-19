@@ -20,6 +20,8 @@ type AppConfig struct {
 	WebServerPort          string `mapstructure:"WEB_SERVER_PORT"`
 	CacheExpireDuration    int    `mapstructure:"CACHE_EXPIRE_DURATION"`
 	SubscribeTimeout       int    `mapstructure:"SUBSCRIBE_TIMEOUT"`
+	MaxRequestsCount       int    `mapstructure:"MAX_REQUESTS_COUNT"`
+	MaxRetryCount          int    `mapstructure:"MAX_RETRY_COUNT"`
 }
 
 func (config *AppConfig) SetDefault() {
@@ -35,6 +37,8 @@ func (config *AppConfig) SetDefault() {
 	config.WebServerPort = "80"
 	config.CacheExpireDuration = 30
 	config.SubscribeTimeout = 5
+	config.MaxRequestsCount = 10
+	config.MaxRetryCount = 10
 }
 
 func (config *AppConfig) Load(path, name string) (err error) {
@@ -61,6 +65,8 @@ func (config *AppConfig) Load(path, name string) (err error) {
 		viper.BindEnv("WEB_SERVER_PORT")
 		viper.BindEnv("CACHE_EXPIRE_DURATION")
 		viper.BindEnv("SUBSCRIBE_TIMEOUT")
+		viper.BindEnv("MAX_REQUESTS_COUNT")
+		viper.BindEnv("MAX_RETRY_COUNT")
 		return viper.Unmarshal(config)
 	}
 	return viper.Unmarshal(config)

@@ -16,10 +16,14 @@ func (err ProcessQueryFailedError) Error() string {
 	return err.Message
 }
 
-type SubscribeTimeoutError struct {
-	Message string
-}
+type SubscribeTimeoutError struct{}
 
 func (err SubscribeTimeoutError) Error() string {
-	return err.Message
+	return "subscribe timeout"
+}
+
+type MaxRetryCountExceededError struct{}
+
+func (err MaxRetryCountExceededError) Error() string {
+	return "max retry count exceeded"
 }

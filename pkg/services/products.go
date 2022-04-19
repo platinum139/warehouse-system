@@ -44,8 +44,12 @@ func (ps *ProductService) GetBoughtProducts(token, uid string) ([]models.BoughtP
 	}
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
-	if message == "failed" {
+	if message == "internal_err" {
 		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
+	}
+
+	if message == "max_retry_count" {
+		return nil, e.MaxRetryCountExceededError{}
 	}
 
 	if message == "success" {
@@ -87,8 +91,12 @@ func (ps *ProductService) GetBoughtItems(token, uid string) ([]models.BoughtItem
 	}
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
-	if message == "failed" {
+	if message == "internal_err" {
 		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
+	}
+
+	if message == "max_retry_count" {
+		return nil, e.MaxRetryCountExceededError{}
 	}
 
 	if message == "success" {

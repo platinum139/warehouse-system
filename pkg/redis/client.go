@@ -117,7 +117,7 @@ func (client *Client) SubscribeForResult(topic string, timeout int) (string, err
 		client.log.Printf("Received message: %s\n", message.Payload)
 	case <-time.After(time.Duration(timeout) * time.Second):
 		client.log.Printf("Receiving message time out.")
-		return "", e.SubscribeTimeoutError{Message: "receiving response time out"}
+		return "", e.SubscribeTimeoutError{}
 	}
 
 	if err := pubsub.Close(); err != nil {
@@ -125,6 +125,33 @@ func (client *Client) SubscribeForResult(topic string, timeout int) (string, err
 	}
 
 	return message.Payload, nil
+}
+
+func (client *Client) GetLockCounter(token string) (int, error) {
+	res, err := client.rds.Get(client.ctx, "lock:"+token).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(res)
+}
+
+func (client *Client) Lock(token string) error {
+	return client.rds.IncrBy(client.ctx, "lock:"+token, 1).Err()
+}
+
+func (client *Client) Unlock(token string) error {
+	return client.rds.DecrBy(client.ctx, "lock:"+token, 1).Err()
+}
+
+func (client *Client) GetRetryCount(token string) (int, error) {
+	res, err := client.rds.IncrBy(client.ctx, "retry:"+token, 1).Result()
+	if err != nil {
+		return 0, err
+	}
+	return int(res), nil
 }
 
 func NewRedisClient(ctx context.Context, log *log.Logger, config *config.AppConfig) *Client {
