@@ -17,7 +17,9 @@ type Client struct {
 }
 
 func (client *Client) Close() {
-	client.db.Close()
+	if err := client.db.Close(); err != nil {
+		client.log.Printf("Unable to close postgres client: %s\n", err)
+	}
 }
 
 func NewClient(log *log.Logger, config *config.AppConfig) *Client {

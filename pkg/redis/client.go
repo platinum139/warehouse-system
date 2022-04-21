@@ -19,7 +19,9 @@ type Client struct {
 }
 
 func (client *Client) Close() {
-	client.rds.Close()
+	if err := client.rds.Close(); err != nil {
+		client.log.Printf("Unable to close redis client: %s\n", err)
+	}
 }
 
 func (client *Client) GetBoughtProductsCache() ([]models.BoughtProductsQuantity, error) {
