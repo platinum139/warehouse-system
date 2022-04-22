@@ -8,14 +8,19 @@ import (
 	"log"
 	"net/http"
 	e "warehouse-system/errors"
-	"warehouse-system/pkg/services"
+	"warehouse-system/pkg/models"
 )
+
+type ProductService interface {
+	GetBoughtProducts(token, uid string) ([]models.BoughtProductsQuantity, error)
+	GetBoughtItems(token, uid string) ([]models.BoughtItemsQuantity, error)
+}
 
 type WebServer struct {
 	log            *log.Logger
 	host           string
 	port           string
-	productService *services.ProductService
+	productService ProductService
 }
 
 func (server *WebServer) Run() {
@@ -121,7 +126,7 @@ func (server *WebServer) writeError(w http.ResponseWriter, err error, statusCode
 	}
 }
 
-func NewWebServer(host, port string, log *log.Logger, service *services.ProductService) *WebServer {
+func NewWebServer(host, port string, log *log.Logger, service ProductService) *WebServer {
 	log.SetPrefix("[web server] ")
 
 	return &WebServer{
