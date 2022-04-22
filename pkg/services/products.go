@@ -9,13 +9,13 @@ import (
 	"warehouse-system/pkg/redis"
 )
 
-type ProductService struct {
+type ProductServiceImpl struct {
 	log         *log.Logger
 	config      *config.AppConfig
 	redisClient *redis.Client
 }
 
-func (ps *ProductService) GetBoughtProducts(token, uid string) ([]models.BoughtProductsQuantity, error) {
+func (ps *ProductServiceImpl) GetBoughtProducts(token, uid string) ([]models.BoughtProductsQuantity, error) {
 	boughtProductsQuantity, err := ps.redisClient.GetBoughtProductsCache()
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (ps *ProductService) GetBoughtProducts(token, uid string) ([]models.BoughtP
 	return nil, nil
 }
 
-func (ps *ProductService) GetBoughtItems(token, uid string) ([]models.BoughtItemsQuantity, error) {
+func (ps *ProductServiceImpl) GetBoughtItems(token, uid string) ([]models.BoughtItemsQuantity, error) {
 	boughtItemsQuantity, err := ps.redisClient.GetBoughtItemsCache()
 	if err != nil {
 		return nil, err
@@ -110,9 +110,9 @@ func (ps *ProductService) GetBoughtItems(token, uid string) ([]models.BoughtItem
 	return nil, nil
 }
 
-func NewProductService(log *log.Logger, config *config.AppConfig, redisClient *redis.Client) *ProductService {
+func NewProductServiceImpl(log *log.Logger, config *config.AppConfig, redisClient *redis.Client) *ProductServiceImpl {
 	log.SetPrefix("[product service] ")
-	return &ProductService{
+	return &ProductServiceImpl{
 		log:         log,
 		config:      config,
 		redisClient: redisClient,

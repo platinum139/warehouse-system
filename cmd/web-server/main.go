@@ -33,7 +33,7 @@ func main() {
 	}
 	defer redisClient.Close()
 
-	productService := services.NewProductService(logger, appConfig, redisClient)
+	productService := services.NewProductServiceImpl(logger, appConfig, redisClient)
 
 	webServer := api.NewWebServer(appConfig.WebServerHost, appConfig.WebServerPort, logger, productService)
 	webServer.Run()
