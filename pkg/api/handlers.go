@@ -44,8 +44,8 @@ func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r 
 	server.log.Printf("Uid: %s\n", uid)
 
 	boughtProductsQuantity, err := server.productService.GetBoughtProducts(token, uid)
-	target := &e.MaxRetryCountExceededError{}
-	if errors.As(err, &target) {
+	target := e.MaxRetryCountExceededError{}
+	if errors.Is(err, target) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		return
 	}
@@ -55,12 +55,7 @@ func (server *WebServer) BoughtProductsQuantityHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	data, err := json.Marshal(boughtProductsQuantity)
-	if err != nil {
-		server.log.Println("Unable to marshal boughtProductsQuantity struct.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	data, _ := json.Marshal(boughtProductsQuantity)
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(data)
@@ -83,8 +78,8 @@ func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *ht
 	server.log.Printf("Uid: %s\n", uid)
 
 	boughtItemsQuantity, err := server.productService.GetBoughtItems(token, uid)
-	target := &e.MaxRetryCountExceededError{}
-	if errors.As(err, &target) {
+	target := e.MaxRetryCountExceededError{}
+	if errors.Is(err, target) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		return
 	}
@@ -94,12 +89,7 @@ func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
-	data, err := json.Marshal(boughtItemsQuantity)
-	if err != nil {
-		server.log.Println("Unable to marshal boughtItemsQuantity struct.")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	data, _ := json.Marshal(boughtItemsQuantity)
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(data)
@@ -110,15 +100,13 @@ func (server *WebServer) BoughtItemsQuantityHandler(w http.ResponseWriter, r *ht
 }
 
 func (server *WebServer) writeError(w http.ResponseWriter, err error, statusCode int) {
-	data, err := json.Marshal(map[string]string{
+	data, _ := json.Marshal(map[string]string{
 		"error": err.Error(),
 	})
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
+
 	_, err = w.Write(data)
 	if err != nil {
 		server.log.Printf("Unable to send response: %s\n", err)
