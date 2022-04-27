@@ -44,23 +44,20 @@ func (ps *ProductServiceImpl) GetBoughtProducts(token, uid string) ([]models.Bou
 	}
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
-	if message == "internal_err" {
+	switch message {
+	case "internal_err":
 		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
-	}
-
-	if message == "max_retry_count" {
+	case "max_retry_count":
 		return nil, e.MaxRetryCountExceededError{}
-	}
-
-	if message == "success" {
+	case "success":
 		boughtProductsQuantity, err = ps.redisClient.GetBoughtProductsCache()
 		if err != nil {
 			return nil, err
 		}
 		return boughtProductsQuantity, nil
+	default:
+		return nil, nil
 	}
-
-	return nil, nil
 }
 
 func (ps *ProductServiceImpl) GetBoughtItems(token, uid string) ([]models.BoughtItemsQuantity, error) {
@@ -91,23 +88,20 @@ func (ps *ProductServiceImpl) GetBoughtItems(token, uid string) ([]models.Bought
 	}
 	ps.log.Printf("Query worker has processed the request: %s\n", message)
 
-	if message == "internal_err" {
+	switch message {
+	case "internal_err":
 		return nil, e.ProcessQueryFailedError{Message: "failed to process query"}
-	}
-
-	if message == "max_retry_count" {
+	case "max_retry_count":
 		return nil, e.MaxRetryCountExceededError{}
-	}
-
-	if message == "success" {
+	case "success":
 		boughtItemsQuantity, err = ps.redisClient.GetBoughtItemsCache()
 		if err != nil {
 			return nil, err
 		}
 		return boughtItemsQuantity, nil
+	default:
+		return nil, nil
 	}
-
-	return nil, nil
 }
 
 func NewProductServiceImpl(log *log.Logger, config *config.AppConfig, redisClient redis.Client) *ProductServiceImpl {
