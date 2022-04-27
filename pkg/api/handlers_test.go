@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	path = "."
-	file = ".env"
+	path = "../../"
+	file = ".test.env"
 )
 
 type SuiteHandlersTests struct {
