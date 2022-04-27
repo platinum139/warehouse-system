@@ -14,7 +14,7 @@ import (
 type QueueHandler struct {
 	log            *log.Logger
 	config         *config.AppConfig
-	redisClient    *redis.Client
+	redisClient    redis.Client
 	postgresClient *postgres.Client
 }
 
@@ -142,7 +142,7 @@ func (handler *QueueHandler) publishResult(token, uid, result string) {
 	}
 }
 
-func NewQueueHandler(log *log.Logger, config *config.AppConfig, redis *redis.Client, postgres *postgres.Client) *QueueHandler {
+func NewQueueHandler(log *log.Logger, config *config.AppConfig, redis redis.Client, postgres *postgres.Client) *QueueHandler {
 	log.SetPrefix("[queue handler] ")
 	return &QueueHandler{
 		log:            log,

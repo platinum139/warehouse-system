@@ -12,7 +12,7 @@ import (
 type ProductServiceImpl struct {
 	log         *log.Logger
 	config      *config.AppConfig
-	redisClient *redis.Client
+	redisClient redis.Client
 }
 
 func (ps *ProductServiceImpl) GetBoughtProducts(token, uid string) ([]models.BoughtProductsQuantity, error) {
@@ -110,7 +110,7 @@ func (ps *ProductServiceImpl) GetBoughtItems(token, uid string) ([]models.Bought
 	return nil, nil
 }
 
-func NewProductServiceImpl(log *log.Logger, config *config.AppConfig, redisClient *redis.Client) *ProductServiceImpl {
+func NewProductServiceImpl(log *log.Logger, config *config.AppConfig, redisClient redis.Client) *ProductServiceImpl {
 	log.SetPrefix("[product service] ")
 	return &ProductServiceImpl{
 		log:         log,
