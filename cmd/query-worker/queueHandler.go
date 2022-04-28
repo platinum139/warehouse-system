@@ -20,86 +20,104 @@ type QueueHandler struct {
 
 func (handler *QueueHandler) Run() {
 	for {
-		request, err := handler.redisClient.PopRequestFromQueue()
-		if err != nil {
-			handler.log.Printf("Unable to pop request from queue: %s\n", err)
-			continue
-		}
-
-		if request == "" {
-			continue
-		}
-
-		parts := strings.Split(request, ":")
-		token := parts[0]
-		uid := parts[1]
-		query := strings.Join(parts[2:], ":")
-		handler.log.Printf("Received: token %s, uid %s, query %s.\n", token, uid, query)
-
-		// get lock counter for token
-		requestCount, err := handler.redisClient.GetLockCounter(token)
-		if err != nil {
-			handler.log.Printf("Unable to get lock counter for token: %s\n", err)
-			handler.publishResult(token, uid, "internal_err")
-			continue
-		}
-
-		// if counter exceeded, delay and push to queue
-		if requestCount >= handler.config.MaxRequestsCount {
-			handler.log.Printf("Max request count exceeded for token %s.\n", token)
-
-			retryCount, err := handler.redisClient.GetRetryCount(token)
-			if err != nil {
-				handler.log.Printf("Unable to get retry count for token: %s\n", err)
-				handler.publishResult(token, uid, "internal_err")
-				continue
-			}
-			// throw away request if max retry count exceeded
-			if retryCount > handler.config.MaxRetryCount {
-				handler.log.Printf("Max retry count for token: %s\n", err)
-				handler.publishResult(token, uid, "max_retry_count")
-				continue
-			}
-			// delaying with Fibonacci strategy
-			delay := utils.GetFibonacciNumber(retryCount)
-			time.Sleep(time.Duration(delay) * time.Second)
-
-			if err := handler.redisClient.PutRequestToQueue(request); err != nil {
-				handler.log.Printf("Unable to put request to queue: %s\n", err)
-				handler.publishResult(token, uid, "internal_err")
-			} else {
-				handler.log.Println("Request is put to queue successfully.")
-			}
-			continue
-		}
-
-		// if counter is ok, do query
-		if requestCount < handler.config.MaxRequestsCount {
-			if err := handler.redisClient.Lock(token); err != nil {
-				handler.log.Printf("Unable to lock request: %s\n", err)
-				handler.publishResult(token, uid, "internal_err")
-				continue
-			}
-
-			var result string
-			switch query {
-			case "products:bought":
-				result = handler.handleGetBoughtProductsQuery()
-			case "items:bought":
-				result = handler.handleGetBoughtItemsQuery()
-			}
-			handler.publishResult(token, uid, result)
-
-			if err := handler.redisClient.Unlock(token); err != nil {
-				handler.log.Printf("Unable to unlock request: %s\n", err)
-				handler.publishResult(token, uid, "internal_err")
-				continue
-			}
-		}
+		handler.handleQueue()
 	}
 }
 
-func (handler *QueueHandler) handleGetBoughtProductsQuery() string {
+func (handler *QueueHandler) handleQueue() {
+	token, uid, query := handler.getRequest()
+	if token == "" || uid == "" || query == "" {
+		log.Printf("Invalid query. Token=%s, uid=%s, query=%s.\n\n", token, uid, query)
+		return
+	}
+
+	requestCount, err := handler.redisClient.GetLockCounter(token)
+	if err != nil {
+		handler.log.Printf("Unable to get lock counter for token: %s\n", err)
+		handler.publishResult(token, uid, "internal_err")
+		return
+	}
+
+	if requestCount >= handler.config.MaxRequestsCount {
+		handler.handleMaxRequestCount(token, uid, query)
+		return
+	}
+
+	result := handler.processQuery(token, query)
+	handler.publishResult(token, uid, result)
+}
+
+func (handler *QueueHandler) getRequest() (string, string, string) {
+	request, err := handler.redisClient.PopRequestFromQueue()
+	if err != nil {
+		handler.log.Printf("Unable to pop request from queue: %s\n", err)
+		return "", "", ""
+	}
+
+	if strings.Count(request, ":") < 2 {
+		handler.log.Printf("Invalid request: %s\n", request)
+		return "", "", ""
+	}
+
+	parts := strings.Split(request, ":")
+	token := parts[0]
+	uid := parts[1]
+	query := strings.Join(parts[2:], ":")
+	handler.log.Printf("Received: token %s, uid %s, query %s.\n", token, uid, query)
+	return token, uid, query
+}
+
+func (handler *QueueHandler) handleMaxRequestCount(token, uid, query string) {
+	handler.log.Printf("Max request count exceeded for token %s.\n", token)
+
+	retryCount, err := handler.redisClient.GetRetryCount(token)
+	if err != nil {
+		handler.log.Printf("Unable to get retry count for token: %s\n", err)
+		handler.publishResult(token, uid, "internal_err")
+		return
+	}
+	// throw away request if max retry count exceeded
+	if retryCount > handler.config.MaxRetryCount {
+		handler.log.Printf("Max retry count for token: %s\n", err)
+		handler.publishResult(token, uid, "max_retry_count")
+		return
+	}
+	// delaying with Fibonacci strategy
+	delay := utils.GetFibonacciNumber(retryCount)
+	time.Sleep(time.Duration(delay) * time.Second)
+
+	request := strings.Join([]string{token, uid, query}, ":")
+	if err := handler.redisClient.PutRequestToQueue(request); err != nil {
+		handler.log.Printf("Unable to put request to queue: %s\n", err)
+		handler.publishResult(token, uid, "internal_err")
+		return
+	}
+	handler.log.Println("Request is put to queue successfully.")
+}
+
+func (handler *QueueHandler) processQuery(token, query string) string {
+	if err := handler.redisClient.Lock(token); err != nil {
+		handler.log.Printf("Unable to lock request: %s\n", err)
+		return "internal_err"
+	}
+
+	var result string
+	switch query {
+	case "products:bought":
+		result = handler.processGetBoughtProductsQuery()
+	case "items:bought":
+		result = handler.processGetBoughtItemsQuery()
+	}
+
+	if err := handler.redisClient.Unlock(token); err != nil {
+		handler.log.Printf("Unable to unlock request: %s\n", err)
+		return "internal_err"
+	}
+
+	return result
+}
+
+func (handler *QueueHandler) processGetBoughtProductsQuery() string {
 	handler.log.Printf("Incoming request: products:bought.")
 	boughtProductsQuantity, err := handler.postgresClient.GetBoughtProductsQuantity()
 	if err != nil {
@@ -116,7 +134,7 @@ func (handler *QueueHandler) handleGetBoughtProductsQuery() string {
 	return "success"
 }
 
-func (handler *QueueHandler) handleGetBoughtItemsQuery() string {
+func (handler *QueueHandler) processGetBoughtItemsQuery() string {
 	handler.log.Printf("Incoming request: items:bought.")
 	boughtItemsQuantity, err := handler.postgresClient.GetBoughtItemsQuantity()
 	if err != nil {
