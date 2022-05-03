@@ -8,6 +8,14 @@ func (err BadRequestError) Error() string {
 	return err.Message
 }
 
+type InvalidQueryError struct {
+	Query string
+}
+
+func (err InvalidQueryError) Error() string {
+	return "Invalid query: " + err.Query
+}
+
 type ProcessQueryFailedError struct {
 	Message string
 }

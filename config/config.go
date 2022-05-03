@@ -22,6 +22,8 @@ type AppConfig struct {
 	SubscribeTimeout       int    `mapstructure:"SUBSCRIBE_TIMEOUT"`
 	MaxRequestsCount       int    `mapstructure:"MAX_REQUESTS_COUNT"`
 	MaxRetryCount          int    `mapstructure:"MAX_RETRY_COUNT"`
+	MaxWorkersCount        int    `mapstructure:"MAX_WORKERS_COUNT"`
+	WorkersCountCheckTime  int    `mapstructure:"WORKERS_COUNT_CHECK_TIME"`
 }
 
 func (config *AppConfig) SetDefault() {
@@ -39,6 +41,8 @@ func (config *AppConfig) SetDefault() {
 	config.SubscribeTimeout = 5
 	config.MaxRequestsCount = 10
 	config.MaxRetryCount = 10
+	config.MaxWorkersCount = 1000
+	config.WorkersCountCheckTime = 200
 }
 
 func (config *AppConfig) Load(path, name string) (err error) {
@@ -67,6 +71,8 @@ func (config *AppConfig) Load(path, name string) (err error) {
 		viper.BindEnv("SUBSCRIBE_TIMEOUT")
 		viper.BindEnv("MAX_REQUESTS_COUNT")
 		viper.BindEnv("MAX_RETRY_COUNT")
+		viper.BindEnv("MAX_WORKERS_COUNT")
+		viper.BindEnv("WORKERS_COUNT_CHECK_TIME")
 		return viper.Unmarshal(config)
 	}
 	return viper.Unmarshal(config)

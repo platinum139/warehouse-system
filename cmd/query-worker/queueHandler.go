@@ -4,12 +4,20 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 	"warehouse-system/config"
+	"warehouse-system/errors"
 	"warehouse-system/pkg/postgres"
 	"warehouse-system/pkg/redis"
 	"warehouse-system/utils"
 )
+
+type Request struct {
+	Query string
+	Token string
+	Uid   string
+}
 
 type QueueHandler struct {
 	log            *log.Logger
@@ -18,6 +26,11 @@ type QueueHandler struct {
 	postgresClient *postgres.Client
 }
 
+var (
+	mutex        sync.Mutex
+	workersCount int
+)
+
 func (handler *QueueHandler) Run() {
 	for {
 		handler.handleQueue()
@@ -25,38 +38,50 @@ func (handler *QueueHandler) Run() {
 }
 
 func (handler *QueueHandler) handleQueue() {
-	token, uid, query := handler.getRequest()
-	if token == "" || uid == "" || query == "" {
-		log.Printf("Invalid query. Token=%s, uid=%s, query=%s.\n\n", token, uid, query)
-		return
-	}
-
-	requestCount, err := handler.redisClient.GetLockCounter(token)
+	request, err := handler.getRequest()
 	if err != nil {
-		handler.log.Printf("Unable to get lock counter for token: %s\n", err)
-		handler.publishResult(token, uid, "internal_err")
+		handler.log.Printf("Unable to get request: %s\n", err)
 		return
 	}
 
-	if requestCount >= handler.config.MaxRequestsCount {
-		handler.handleMaxRequestCount(token, uid, query)
+	if request == nil {
+		handler.log.Printf("No requests in queue.")
 		return
 	}
 
-	result := handler.processQuery(token, query)
-	handler.publishResult(token, uid, result)
+	if request.Query == "" || request.Uid == "" || request.Token == "" {
+		handler.log.Printf("Invalid query. Token=%s, uid=%s, query=%s.\n\n", request.Token, request.Uid, request.Query)
+		return
+	}
+
+	for workersCount > handler.config.MaxWorkersCount {
+		handler.log.Printf("Unable to start more workers than %d. Sleeping for %d millisec...\n",
+			handler.config.MaxWorkersCount, handler.config.WorkersCountCheckTime)
+		time.Sleep(time.Duration(handler.config.WorkersCountCheckTime) * time.Millisecond)
+	}
+
+	go func() {
+		handler.log.Printf("Starting %d worker...\n", workersCount)
+		handler.worker(request)
+		handler.log.Printf("Finishing %d worker.\n", workersCount)
+	}()
 }
 
-func (handler *QueueHandler) getRequest() (string, string, string) {
+func (handler *QueueHandler) getRequest() (*Request, error) {
 	request, err := handler.redisClient.PopRequestFromQueue()
 	if err != nil {
 		handler.log.Printf("Unable to pop request from queue: %s\n", err)
-		return "", "", ""
+		return nil, err
+	}
+
+	if request == "" {
+		handler.log.Printf("No requests in the queue.")
+		return nil, nil
 	}
 
 	if strings.Count(request, ":") < 2 {
 		handler.log.Printf("Invalid request: %s\n", request)
-		return "", "", ""
+		return nil, errors.InvalidQueryError{Query: request}
 	}
 
 	parts := strings.Split(request, ":")
@@ -64,32 +89,57 @@ func (handler *QueueHandler) getRequest() (string, string, string) {
 	uid := parts[1]
 	query := strings.Join(parts[2:], ":")
 	handler.log.Printf("Received: token %s, uid %s, query %s.\n", token, uid, query)
-	return token, uid, query
+	return &Request{Query: query, Token: token, Uid: uid}, nil
 }
 
-func (handler *QueueHandler) handleMaxRequestCount(token, uid, query string) {
-	handler.log.Printf("Max request count exceeded for token %s.\n", token)
+func (handler *QueueHandler) worker(request *Request) {
+	mutex.Lock()
+	workersCount += 1
+	mutex.Unlock()
 
-	retryCount, err := handler.redisClient.GetRetryCount(token)
+	requestCount, err := handler.redisClient.GetLockCounter(request.Token)
+	if err != nil {
+		handler.log.Printf("Unable to get lock counter for token: %s\n", err)
+		handler.publishResult(request.Token, request.Token, "internal_err")
+		return
+	}
+
+	if requestCount >= handler.config.MaxRequestsCount {
+		handler.handleMaxRequestCount(request)
+		return
+	}
+
+	result := handler.processQuery(request.Token, request.Query)
+	handler.publishResult(request.Token, request.Uid, result)
+
+	mutex.Lock()
+	workersCount -= 1
+	mutex.Unlock()
+}
+
+func (handler *QueueHandler) handleMaxRequestCount(request *Request) {
+	handler.log.Printf("Max request count exceeded for token %s.\n", request.Token)
+
+	retryCount, err := handler.redisClient.GetRetryCount(request.Token)
 	if err != nil {
 		handler.log.Printf("Unable to get retry count for token: %s\n", err)
-		handler.publishResult(token, uid, "internal_err")
+		handler.publishResult(request.Token, request.Uid, "internal_err")
 		return
 	}
 	// throw away request if max retry count exceeded
 	if retryCount > handler.config.MaxRetryCount {
 		handler.log.Printf("Max retry count for token: %s\n", err)
-		handler.publishResult(token, uid, "max_retry_count")
+		handler.publishResult(request.Token, request.Uid, "max_retry_count")
 		return
 	}
 	// delaying with Fibonacci strategy
 	delay := utils.GetFibonacciNumber(retryCount)
 	time.Sleep(time.Duration(delay) * time.Second)
 
-	request := strings.Join([]string{token, uid, query}, ":")
-	if err := handler.redisClient.PutRequestToQueue(request); err != nil {
+	requestStr := strings.Join([]string{request.Token, request.Uid, request.Query}, ":")
+	if err := handler.redisClient.PutRequestToQueue(requestStr); err != nil {
 		handler.log.Printf("Unable to put request to queue: %s\n", err)
-		handler.publishResult(token, uid, "internal_err")
+		handler.publishResult(request.Token, request.Uid, "internal_err")
 		return
 	}
 	handler.log.Println("Request is put to queue successfully.")
