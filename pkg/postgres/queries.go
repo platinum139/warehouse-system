@@ -5,6 +5,30 @@ import (
 	"warehouse-system/pkg/models"
 )
 
+func (client *Client) CreateUser(user models.User) error {
+	query := "INSERT INTO clients(external_id, username, phone, email) VALUES (?,?,?,?)"
+	stmt, err := client.db.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(user.ExternalId, user.Username, user.Phone, user.Email)
+	return err
+}
+
+func (client *Client) CreateManufacturer(manufacturer models.Manufacturer) {
+
+}
+
+func (client *Client) CreateProduct(product models.Product) {
+
+}
+
+func (client *Client) CreateOrder(order models.Order) {
+
+}
+
 func (client *Client) GetBoughtProductsQuantity() ([]models.BoughtProductsQuantity, error) {
 	log.SetPrefix("[Client.GetBoughtProductsQuantity]")
 
